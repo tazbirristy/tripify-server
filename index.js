@@ -18,6 +18,17 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
+async function run() {
+  try {
+    app.post("/services", verifyJWT, async (req, res) => {
+      const service = req.body;
+      const result = await serviceCollection.insertOne(service);
+      res.send(result);
+    });
+  } finally {
+  }
+}
+
 app.get("/", (req, res) => {
   res.send("Tripify server is running");
 });
