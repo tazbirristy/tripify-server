@@ -20,7 +20,18 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    app.post("/services", verifyJWT, async (req, res) => {
+    const serviceCollection = client.db("tripify").collection("services");
+
+    // get limit services data
+    app.get("/services", async (req, res) => {
+      const query = {};
+      const sort = { time: -1 };
+      const cursor = serviceCollection.find(query).sort(sort);
+      const services = await cursor.limit(3).toArray();
+      res.send(services);
+    });
+    // post services data
+    app.post("/services", async (req, res) => {
       const service = req.body;
       const result = await serviceCollection.insertOne(service);
       res.send(result);
@@ -28,6 +39,8 @@ async function run() {
   } finally {
   }
 }
+
+run().catch((err) => console.error(err));
 
 app.get("/", (req, res) => {
   res.send("Tripify server is running");
