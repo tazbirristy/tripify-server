@@ -52,12 +52,42 @@ async function run() {
       const result = await serviceCollection.insertOne(service);
       res.send(result);
     });
+    // add services in database
+    app.post("/services", verifyJWT, async (req, res) => {
+      const service = req.body;
+      const result = await serviceCollection.insertOne(service);
+      res.send(result);
+    });
+    // review api get
+    app.get("/reviews", verifyJWT, async (req, res) => {
+      const decoded = req.decoded;
+      if (decoded.email !== req.query.email) {
+        res.status(401).send({ message: "Unauthorized Access" });
+      }
+      let query = {};
+      if (req.query.email) {
+        query = {
+          email: req.query.email,
+        };
+      }
+      const sort = { date: -1 };
+      const cursor = reviewCollection.find(query).sort(sort);
+      const reviews = await cursor.toArray();
+      res.send(reviews);
+    });
 
     // review api
     app.post("/reviews", async (req, res) => {
       const review = req.body;
       const result = await reviewCollection.insertOne(review);
       res.send(result);
+    });
+    // review single data get for update api
+    app.get("/reviews/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const review = await reviewCollection.findOne(query);
+      res.send(review);
     });
   } finally {
   }
