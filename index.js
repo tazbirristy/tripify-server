@@ -53,13 +53,13 @@ async function run() {
       res.send(result);
     });
     // add services in database
-    app.post("/services", verifyJWT, async (req, res) => {
+    app.post("/services", async (req, res) => {
       const service = req.body;
       const result = await serviceCollection.insertOne(service);
       res.send(result);
     });
     // review api get
-    app.get("/reviews", verifyJWT, async (req, res) => {
+    app.get("/reviews", async (req, res) => {
       const decoded = req.decoded;
       if (decoded.email !== req.query.email) {
         res.status(401).send({ message: "Unauthorized Access" });
@@ -88,6 +88,30 @@ async function run() {
       const query = { _id: ObjectId(id) };
       const review = await reviewCollection.findOne(query);
       res.send(review);
+    });
+    // review single data put for update api
+    app.put("/reviews/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const review = req.body;
+      const option = { upsert: true };
+      const updatedReview = {
+        $set: {
+          serviceName: review.serviceName,
+          name: review.name,
+          reviewDesc: review.reviewDesc,
+          userRating: review.userRating,
+          email: review.email,
+          phone: review.phone,
+          date: review.date,
+        },
+      };
+      const result = await reviewCollection.updateOne(
+        filter,
+        updatedReview,
+        option
+      );
+      res.send(result);
     });
   } finally {
   }
