@@ -17,12 +17,36 @@ const client = new MongoClient(uri, {
   useUnifiedTopology: true,
   serverApi: ServerApiVersion.v1,
 });
+function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    res.status(401).send({ message: "Unauthorized Access" });
+  }
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+    if (err) {
+      res.status(403).send({ message: "Forbidden Access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
 
 async function run() {
   try {
     const serviceCollection = client.db("tripify").collection("services");
+    const reviewCollection = client.db("tripify").collection("reviews");
 
-    // get limit services data
+    // jwt token
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "10h",
+      });
+      res.send({ token });
+    });
+
+    // get limit services from data base
     app.get("/services", async (req, res) => {
       const query = {};
       const sort = { time: -1 };
@@ -46,20 +70,15 @@ async function run() {
       res.send(service);
     });
 
-    // post services data
-    app.post("/services", async (req, res) => {
+    // post/add services services data
+    app.post("/services", verifyJWT, async (req, res) => {
       const service = req.body;
       const result = await serviceCollection.insertOne(service);
       res.send(result);
     });
-    // add services in database
-    app.post("/services", async (req, res) => {
-      const service = req.body;
-      const result = await serviceCollection.insertOne(service);
-      res.send(result);
-    });
+
     // review api get
-    app.get("/reviews", async (req, res) => {
+    app.get("/reviews", verifyJWT, async (req, res) => {
       const decoded = req.decoded;
       if (decoded.email !== req.query.email) {
         res.status(401).send({ message: "Unauthorized Access" });
@@ -90,7 +109,7 @@ async function run() {
       res.send(review);
     });
     // review single data put for update api
-    app.put("/reviews/:id", async (req, res) => {
+    app.put("/reviews/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const review = req.body;
@@ -114,7 +133,7 @@ async function run() {
       res.send(result);
     });
     // review Delete
-    app.delete("/reviews/:id", async (req, res) => {
+    app.delete("/reviews/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await reviewCollection.deleteOne(query);
